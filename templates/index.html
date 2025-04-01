@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使劲看case</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+        }
+        .container {
+            padding: 10px;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        .content-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .url-column {
+            flex: 1;
+            min-width: 300px;
+            max-width: 100%;
+        }
+        .url-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+        .url-input-group {
+            width: 100%;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 8px 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .error {
+            color: red;
+            margin: 5px 0;
+        }
+        .group-selector {
+            margin: 10px 0;
+            width: 100%;
+        }
+        select {
+            padding: 6px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            min-width: 200px;
+            max-width: 100%;
+        }
+        .url-item {
+            word-break: break-all;
+            margin: 4px 0;
+            padding: 4px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .no-links {
+            margin-top: 10px;
+            font-style: italic;
+            color: #666;
+        }
+        
+        .tabs {
+            margin-top: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .tab-button {
+            padding: 6px 10px;
+            background-color: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            margin-right: 5px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        .tab-button.active {
+            color: #4CAF50;
+            border-bottom: 2px solid #4CAF50;
+        }
+        .tab-content {
+            padding: 10px 0;
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        .media-container {
+            margin: 5px 0;
+            padding: 8px;
+        }
+        audio {
+            width: 100%;
+            margin: 5px 0;
+        }
+        .video-container {
+            width: 100%;
+            margin: 5px 0;
+            border-radius: 4px;
+            background-color: #000;
+            overflow: hidden;
+            text-align: center;
+        }
+        .video-container video {
+            max-width: 100%;
+            max-height: 400px;
+            margin: 0 auto;
+            display: block;
+        }
+        .subtitle-content, .json-content {
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 8px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+        .json-content {
+            font-family: monospace;
+        }
+        .line-numbers {
+            counter-reset: line;
+            padding-left: 3.5em;
+            position: relative;
+        }
+        .line-numbers > span {
+            display: block;
+        }
+        .line-numbers > span:before {
+            counter-increment: line;
+            content: counter(line);
+            position: absolute;
+            left: 0;
+            margin-left: 1em;
+            color: #888;
+            min-width: 2em;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <form method="POST" id="url-form">
+            <div class="url-inputs">
+                <div class="url-input-group">
+                    <input type="text" name="url1" placeholder="输入第一个URL提取链接" value="{{ url1 }}">
+                </div>
+                <div class="url-input-group">
+                    <input type="text" name="url2" placeholder="输入第二个URL提取链接" value="{{ url2 }}">
+                </div>
+            </div>
+            <button type="submit">提取链接</button>
+            
+            {% if selected_group %}
+            <input type="hidden" name="group_select" value="{{ selected_group }}">
+            {% endif %}
+            <input type="hidden" name="active_tab" id="active-tab-input" value="{{ active_tab }}">
+        </form>
+        
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+        
+        {% if all_groups %}
+        <div class="group-selector">
+            <form method="POST" id="group-form">
+                <input type="hidden" name="url1" value="{{ url1 }}">
+                <input type="hidden" name="url2" value="{{ url2 }}">
+                <input type="hidden" name="is_group_select" value="true">
+                <select name="group_select" id="group-select" onchange="document.getElementById('group-form').submit()">
+                    {% for group in all_groups %}
+                    <option value="{{ group }}" {% if group == selected_group %}selected{% endif %}>
+                        {{ group }} ({{ format_group_count(grouped_links[group]['url1'] + grouped_links[group]['url2']) }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+        
+        {% if selected_group and file_types %}
+        <div class="tabs">
+            {% for tab in tab_order %}
+                {% if tab in file_types and file_types[tab] %}
+                <button class="tab-button {% if tab == active_tab %}active{% endif %}" 
+                        onclick="changeTab('{{ tab }}')">
+                    {{ tab }} ({{ file_types[tab]|length }})
+                </button>
+                {% endif %}
+            {% endfor %}
+        </div>
+        
+        <div class="content-container">
+            <div class="url-column">
+                {% for file_type, urls in file_types.items() %}
+                <div class="tab-content {% if file_type == active_tab %}active{% endif %}" id="tab-{{ file_type }}-1">
+                    {% if file_type == '视频' %}
+                        {% for url in urls %}
+                        {% if url in grouped_links[selected_group]['url1'] %}
+                        <div class="media-container">
+                            <div class="video-container">
+                                <video controls preload="metadata">
+                                    <source src="{{ url }}" type="video/mp4">
+                                    您的浏览器不支持HTML5视频播放。
+                                </video>
+                            </div>
+                            <div class="url-item">
+                                <a href="{{ url }}" target="_blank">{{ url }}</a>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    
+                    {% elif file_type == '音频' %}
+                        {% for url in urls %}
+                        {% if url in grouped_links[selected_group]['url1'] %}
+                        <div class="media-container">
+                            <audio controls>
+                                <source src="{{ url }}">
+                                您的浏览器不支持HTML5音频播放。
+                            </audio>
+                            <div class="url-item">
+                                <a href="{{ url }}" target="_blank">{{ url }}</a>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    
+                    {% elif file_type == '字幕' %}
+                        {% for url in urls %}
+                        {% if url in grouped_links[selected_group]['url1'] %}
+                        <div class="media-container">
+                            <div class="url-item">
+                                <a href="{{ url }}" target="_blank">{{ url }}</a>
+                            </div>
+                            <div class="subtitle-content" id="subtitle-content-1-{{ loop.index }}">加载中...</div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    
+                    {% elif file_type == 'JSON' %}
+                        {% for url in urls %}
+                        {% if url in grouped_links[selected_group]['url1'] %}
+                        <div class="media-container">
+                            <div class="url-item">
+                                <a href="{{ url }}" target="_blank">{{ url }}</a>
+                            </div>
+                            <div class="json-content" id="json-content-1-{{ loop.index }}">加载中...</div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    
+                    {% else %}
+                        {% for url in urls %}
+                        {% if url in grouped_links[selected_group]['url1'] %}
+                        <div class="url-item">
+                            <a href="{{ url }}" target="_blank">{{ url }}</a>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="url-column">
+                {% for file_type, urls in file_types.items() %}
+                <div class="tab-content {% if file_type == active_tab %}active{% endif %}" id="tab-{{ file_type }}-2">
+                    {% if file_type == '视频' %}
+                        {% for url in urls %}
+                        {% if url in grouped_links[selected_group]['url2'] %}
+                        <div class="media-container">
+                            <div class="video-container">
+                                <video controls preload="metadata">
+                                    <source src="{{ url }}" type="video/mp4">
+                                    您的浏览器不支持HTML5视频播放。
+                                </video>
+                            </div>
+                            <div class="url-item">
+                                <a href="{{ url }}" target="_blank">{{ url }}</a>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    
+                    {% elif file_type == '音频' %}
+                        {% for url in urls %}
+                        {% if url in grouped_links[selected_group]['url2'] %}
+                        <div class="media-container">
+                            <audio controls>
+                                <source src="{{ url }}">
+                                您的浏览器不支持HTML5音频播放。
+                            </audio>
+                            <div class="url-item">
+                                <a href="{{ url }}" target="_blank">{{ url }}</a>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    
+                    {% elif file_type == '字幕' %}
+                        {% for url in urls %}
+                        {% if url in grouped_links[selected_group]['url2'] %}
+                        <div class="media-container">
+                            <div class="url-item">
+                                <a href="{{ url }}" target="_blank">{{ url }}</a>
+                            </div>
+                            <div class="subtitle-content" id="subtitle-content-2-{{ loop.index }}">加载中...</div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    
+                    {% elif file_type == 'JSON' %}
+                        {% for url in urls %}
+                        {% if url in grouped_links[selected_group]['url2'] %}
+                        <div class="media-container">
+                            <div class="url-item">
+                                <a href="{{ url }}" target="_blank">{{ url }}</a>
+                            </div>
+                            <div class="json-content" id="json-content-2-{{ loop.index }}">加载中...</div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    
+                    {% else %}
+                        {% for url in urls %}
+                        {% if url in grouped_links[selected_group]['url2'] %}
+                        <div class="url-item">
+                            <a href="{{ url }}" target="_blank">{{ url }}</a>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% elif request.method == 'POST' and not error %}
+        <div class="no-links">页面上未找到链接。</div>
+        {% endif %}
+    </div>
+    
+    <script>
+        // 切换标签页
+        function changeTab(tabName) {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabButtons.forEach(button => {
+                if (button.textContent.trim().startsWith(tabName)) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+            
+            tabContents.forEach(content => {
+                if (content.id === 'tab-' + tabName + '-1' || content.id === 'tab-' + tabName + '-2') {
+                    content.classList.add('active');
+                    
+                    if (tabName === '字幕') {
+                        loadAllSubtitles();
+                    } else if (tabName === 'JSON') {
+                        loadAllJSON();
+                    }
+                } else {
+                    content.classList.remove('active');
+                }
+            });
+            
+            document.getElementById('active-tab-input').value = tabName;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        const contentCache = new Map();
+
+        function loadSubtitle(url, elementId) {
+            const contentElement = document.getElementById(elementId);
+            if (!contentElement) return;
+            
+            contentElement.innerHTML = '加载中...';
+            
+            if (contentCache.has(url)) {
+                renderContent(contentElement, contentCache.get(url));
+                return;
+            }
+
+            fetch('/proxy?url=' + encodeURIComponent(url))
+                .then(response => response.text())
+                .then(data => {
+                    contentCache.set(url, data);
+                    renderContent(contentElement, data);
+                })
+                .catch(error => {
+                    contentElement.innerHTML = '加载失败: ' + error.message;
+                });
+        }
+        
+        function loadJSON(url, elementId) {
+            const contentElement = document.getElementById(elementId);
+            if (!contentElement) return;
+            
+            contentElement.innerHTML = '加载中...';
+            
+            if (contentCache.has(url)) {
+                renderContent(contentElement, contentCache.get(url));
+                return;
+            }
+
+            fetch('/proxy?url=' + encodeURIComponent(url))
+                .then(response => response.json())
+                .then(data => {
+                    const formattedData = JSON.stringify(data, null, 2);
+                    contentCache.set(url, formattedData);
+                    renderContent(contentElement, formattedData);
+                })
+                .catch(error => {
+                    contentElement.innerHTML = '加载失败: ' + error.message;
+                });
+        }
+        
+        function renderContent(element, data) {
+            element.innerHTML = `<div class="line-numbers">${data.split('\n').map(line => `<span>${escapeHtml(line)}</span>`).join('')}</div>`;
+        }
+        
+        function loadAllSubtitles() {
+            loadContainers('.subtitle-content');
+        }
+        
+        function loadAllJSON() {
+            loadContainers('.json-content');
+        }
+        
+        function loadContainers(selector) {
+            const containers = document.querySelectorAll(selector);
+            containers.forEach(container => {
+                const link = container.parentElement.querySelector('a');
+                if (link && container.textContent.trim() === '加载中...') {
+                    const loaderFunction = selector === '.subtitle-content' ? loadSubtitle : loadJSON;
+                    loaderFunction(link.href, container.id);
+                }
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const activeTab = document.getElementById('active-tab-input').value;
+            if (activeTab === '字幕') {
+                loadAllSubtitles();
+            } else if (activeTab === 'JSON') {
+                loadAllJSON();
+            }
+        });
+    </script>
+</body>
+</html>
