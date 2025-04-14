@@ -161,6 +161,63 @@
             min-width: 2em;
             text-align: right;
         }
+        .subtitle-selector {
+            margin-bottom: 10px;
+            text-align: right;
+        }
+        
+        .subtitle-selector select {
+            padding: 6px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            min-width: 200px;
+            background-color: #f9f9f9;
+            font-size: 0.9em;
+        }
+        
+        /* 添加视频字幕样式 */
+        video::cue {
+            font-size: 1.2em;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+        }
+        
+        /* 自定义顶部字幕样式 */
+        .video-container {
+            position: relative;
+        }
+        
+        .top-subtitle {
+            position: absolute;
+            top: 10px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 5px 10px;
+            font-size: 1.2em;
+            z-index: 10;
+            border-radius: 4px;
+            max-width: 80%;
+            margin: 0 auto;
+            min-height: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        /* 字幕样式 */
+        .subtitle-chinese {
+            font-weight: bold;
+            color: white;
+            margin-bottom: 2px;
+        }
+        
+        .subtitle-english {
+            font-style: italic;
+            color: #cccccc;
+        }
     </style>
 </head>
 <body>
@@ -221,12 +278,21 @@
                     {% if file_type == '视频' %}
                         {% for url in urls %}
                         {% if url in grouped_links[selected_group]['url1'] %}
-                        <div class="media-container">
+                        <div class="media-container" data-group="{{ selected_group }}">
+                            <div class="subtitle-selector">
+                                <select onchange="changeSubtitle(this, this.closest('.media-container').querySelector('video'))">
+                                    <option value="">选择字幕</option>
+                                    {% for subtitle_url in file_types['字幕'] if subtitle_url in grouped_links[selected_group]['url1'] %}
+                                    <option value="{{ subtitle_url }}">字幕{{ loop.index }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                             <div class="video-container">
-                                <video controls preload="metadata">
+                                <video controls preload="metadata" class="video-player">
                                     <source src="{{ url }}" type="video/mp4">
                                     您的浏览器不支持HTML5视频播放。
                                 </video>
+                                <div class="top-subtitle" id="subtitle-display-{{ loop.index }}"></div>
                             </div>
                             <div class="url-item">
                                 <a href="{{ url }}" target="_blank">{{ url }}</a>
@@ -293,12 +359,21 @@
                     {% if file_type == '视频' %}
                         {% for url in urls %}
                         {% if url in grouped_links[selected_group]['url2'] %}
-                        <div class="media-container">
+                        <div class="media-container" data-group="{{ selected_group }}">
+                            <div class="subtitle-selector">
+                                <select onchange="changeSubtitle(this, this.closest('.media-container').querySelector('video'))">
+                                    <option value="">选择字幕</option>
+                                    {% for subtitle_url in file_types['字幕'] if subtitle_url in grouped_links[selected_group]['url2'] %}
+                                    <option value="{{ subtitle_url }}">字幕{{ loop.index }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                             <div class="video-container">
-                                <video controls preload="metadata">
+                                <video controls preload="metadata" class="video-player">
                                     <source src="{{ url }}" type="video/mp4">
                                     您的浏览器不支持HTML5视频播放。
                                 </video>
+                                <div class="top-subtitle" id="subtitle-display-{{ loop.index }}"></div>
                             </div>
                             <div class="url-item">
                                 <a href="{{ url }}" target="_blank">{{ url }}</a>
@@ -384,6 +459,7 @@
                 if (content.id === 'tab-' + tabName + '-1' || content.id === 'tab-' + tabName + '-2') {
                     content.classList.add('active');
                     
+                    // 加载相应内容
                     if (tabName === '字幕') {
                         loadAllSubtitles();
                     } else if (tabName === 'JSON') {
@@ -403,8 +479,10 @@
             return div.innerHTML;
         }
         
+        // 内容缓存
         const contentCache = new Map();
-
+        
+        // 加载字幕内容
         function loadSubtitle(url, elementId) {
             const contentElement = document.getElementById(elementId);
             if (!contentElement) return;
@@ -416,17 +494,34 @@
                 return;
             }
 
+            // 使用ArrayBuffer处理编码问题
             fetch('/proxy?url=' + encodeURIComponent(url))
-                .then(response => response.text())
-                .then(data => {
-                    contentCache.set(url, data);
-                    renderContent(contentElement, data);
+                .then(response => response.arrayBuffer())
+                .then(buffer => {
+                    // 尝试不同的编码
+                    let text;
+                    try {
+                        const decoder = new TextDecoder('utf-8');
+                        text = decoder.decode(buffer);
+                    } catch (e) {
+                        // 如果UTF-8解码失败，尝试其他编码
+                        try {
+                            const decoder = new TextDecoder('gb18030');
+                            text = decoder.decode(buffer);
+                        } catch (e2) {
+                            // 最后使用默认编码
+                            text = new TextDecoder().decode(buffer);
+                        }
+                    }
+                    contentCache.set(url, text);
+                    renderContent(contentElement, text);
                 })
                 .catch(error => {
                     contentElement.innerHTML = '加载失败: ' + error.message;
                 });
         }
         
+        // 加载JSON内容
         function loadJSON(url, elementId) {
             const contentElement = document.getElementById(elementId);
             if (!contentElement) return;
@@ -450,18 +545,22 @@
                 });
         }
         
+        // 渲染内容
         function renderContent(element, data) {
             element.innerHTML = `<div class="line-numbers">${data.split('\n').map(line => `<span>${escapeHtml(line)}</span>`).join('')}</div>`;
         }
         
+        // 加载所有字幕
         function loadAllSubtitles() {
             loadContainers('.subtitle-content');
         }
         
+        // 加载所有JSON
         function loadAllJSON() {
             loadContainers('.json-content');
         }
         
+        // 加载容器内容
         function loadContainers(selector) {
             const containers = document.querySelectorAll(selector);
             containers.forEach(container => {
@@ -473,13 +572,193 @@
             });
         }
         
+        // 为视频添加字幕
+        function changeSubtitle(select, video) {
+            const selectedUrl = select.value;
+            const subtitleDisplay = video.nextElementSibling;
+            
+            // 清除旧的字幕和监听器
+            if (video._updateSubtitleFn) {
+                video.removeEventListener('timeupdate', video._updateSubtitleFn);
+                delete video._updateSubtitleFn;
+            }
+            
+            if (!selectedUrl || !subtitleDisplay) {
+                if (subtitleDisplay) subtitleDisplay.innerHTML = '';
+                return;
+            }
+            
+            // 获取字幕内容
+            fetch('/proxy?url=' + encodeURIComponent(selectedUrl))
+                .then(response => response.text())
+                .then(srtContent => {
+                    try {
+                        // 解析字幕
+                        const subtitles = parseSrt(srtContent);
+                        
+                        // 添加时间更新监听器
+                        const updateSubtitle = function() {
+                            const currentTime = video.currentTime;
+                            let subtitle = '';
+                            
+                            // 查找当前时间对应的字幕
+                            for (let i = 0; i < subtitles.length; i++) {
+                                if (currentTime >= subtitles[i].start && currentTime <= subtitles[i].end) {
+                                    subtitle = subtitles[i].text;
+                                    break;
+                                }
+                            }
+                            
+                            // 更新字幕显示
+                            subtitleDisplay.innerHTML = subtitle;
+                        };
+                        
+                        video.addEventListener('timeupdate', updateSubtitle);
+                        video._updateSubtitleFn = updateSubtitle;
+                        
+                        // 初始显示
+                        updateSubtitle();
+                    } catch (error) {
+                        console.error('字幕处理错误:', error);
+                        subtitleDisplay.innerHTML = '字幕加载失败';
+                    }
+                })
+                .catch(error => {
+                    console.error('字幕加载失败:', error);
+                    subtitleDisplay.innerHTML = '字幕加载失败';
+                });
+        }
+        
+        // 解析SRT字幕，处理双语字幕
+        function parseSrt(srtContent) {
+            const subtitles = [];
+            
+            try {
+                // 预处理内容，处理可能的编码问题
+                srtContent = srtContent.replace(/\ufffd/g, ''); // 移除替换字符
+                
+                // 按空行分割字幕块
+                const blocks = srtContent.trim().split(/\r?\n\r?\n/);
+                
+                for (let block of blocks) {
+                    const lines = block.split(/\r?\n/).filter(line => line.trim() !== '');
+                    
+                    if (lines.length < 2) continue;
+                    
+                    // 查找时间行
+                    let timeLineIndex = -1;
+                    for (let i = 0; i < lines.length; i++) {
+                        if (lines[i].includes(' --> ')) {
+                            timeLineIndex = i;
+                            break;
+                        }
+                    }
+                    
+                    if (timeLineIndex < 0) continue;
+                    
+                    // 提取时间
+                    const timeLine = lines[timeLineIndex];
+                    const timeMatch = timeLine.match(/(\d+:\d+:\d+[,\.]\d+)\s*-->\s*(\d+:\d+:\d+[,\.]\d+)/);
+                    
+                    if (!timeMatch || timeMatch.length < 3) continue;
+                    
+                    // 解析时间
+                    const startTime = parseTime(timeMatch[1]);
+                    const endTime = parseTime(timeMatch[2]);
+                    
+                    if (!startTime || !endTime) continue;
+                    
+                    // 获取文本 - 双语字幕处理
+                    const textLines = lines.slice(timeLineIndex + 1);
+                    
+                    // 区分中英文字幕
+                    let chineseText = '';
+                    let englishText = '';
+                    
+                    // 检测是否为双语字幕，通常有两行，第一行中文，第二行英文
+                    if (textLines.length >= 2) {
+                        // 简单判断：包含中文字符的可能是中文行
+                        const hasChineseChar = str => /[\u4e00-\u9fa5]/.test(str);
+                        const line1 = textLines[0];
+                        const line2 = textLines[1];
+                        
+                        // 处理speaker_unk前缀
+                        const cleanLine = line => line.replace(/^speaker_\w+_[^:]+:\s*/, '');
+                        
+                        if (hasChineseChar(line1)) {
+                            chineseText = cleanLine(line1);
+                            englishText = cleanLine(line2 || '');
+                        } else if (hasChineseChar(line2)) {
+                            chineseText = cleanLine(line2);
+                            englishText = cleanLine(line1 || '');
+                        } else {
+                            // 如果都没有中文，就按顺序显示
+                            chineseText = cleanLine(line1);
+                            englishText = textLines.length > 1 ? cleanLine(line2) : '';
+                        }
+                    } else if (textLines.length === 1) {
+                        // 只有一行的情况
+                        const line = textLines[0].replace(/^speaker_\w+_[^:]+:\s*/, '');
+                        englishText = line;
+                    }
+                    
+                    // 组合显示格式
+                    let displayText = '';
+                    if (chineseText && englishText) {
+                        displayText = `<div class="subtitle-chinese">${chineseText}</div>
+                                      <div class="subtitle-english">${englishText}</div>`;
+                    } else if (chineseText) {
+                        displayText = `<div class="subtitle-chinese">${chineseText}</div>`;
+                    } else if (englishText) {
+                        displayText = `<div class="subtitle-english">${englishText}</div>`;
+                    }
+                    
+                    subtitles.push({
+                        start: startTime,
+                        end: endTime,
+                        text: displayText
+                    });
+                }
+            } catch (error) {
+                console.error('字幕解析错误:', error);
+            }
+            
+            return subtitles;
+        }
+        
+        // 解析时间字符串
+        function parseTime(timeStr) {
+            try {
+                timeStr = timeStr.replace(',', '.');
+                const parts = timeStr.split(':');
+                
+                if (parts.length !== 3) return 0;
+                
+                return parseInt(parts[0], 10) * 3600 + 
+                       parseInt(parts[1], 10) * 60 + 
+                       parseFloat(parts[2]);
+            } catch (e) {
+                return 0;
+            }
+        }
+
+        // 初始化
         document.addEventListener('DOMContentLoaded', function() {
+            // 加载初始标签页内容
             const activeTab = document.getElementById('active-tab-input').value;
             if (activeTab === '字幕') {
                 loadAllSubtitles();
             } else if (activeTab === 'JSON') {
                 loadAllJSON();
             }
+            
+            // 初始化视频字幕
+            document.querySelectorAll('.subtitle-selector select').forEach(select => {
+                if (select.value) {
+                    const video = select.closest('.media-container').querySelector('video');
+                    if (video) changeSubtitle(select, video);
+                }
+            });
         });
     </script>
 </body>
