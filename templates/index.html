@@ -208,6 +208,19 @@
         }
         
         /* 字幕样式 */
+        .subtitle-sequence {
+            color: #888;
+            font-size: 0.8em;
+            margin-bottom: 2px;
+        }
+        
+        .subtitle-time {
+            color: #888;
+            font-size: 0.8em;
+            margin-bottom: 5px;
+            font-family: monospace;
+        }
+        
         .subtitle-chinese {
             font-weight: bold;
             color: white;
@@ -668,49 +681,44 @@
                     
                     if (!startTime || !endTime) continue;
                     
-                    // 获取文本 - 双语字幕处理
+                    // 序号行（如果存在）
+                    const sequenceNumber = timeLineIndex > 0 ? lines.slice(0, timeLineIndex).join('<br>') : '';
+                    
+                    // 获取文本 - 包含所有原始信息
                     const textLines = lines.slice(timeLineIndex + 1);
                     
                     // 区分中英文字幕
-                    let chineseText = '';
-                    let englishText = '';
+                    let chineseLines = [];
+                    let englishLines = [];
                     
-                    // 检测是否为双语字幕，通常有两行，第一行中文，第二行英文
-                    if (textLines.length >= 2) {
-                        // 简单判断：包含中文字符的可能是中文行
-                        const hasChineseChar = str => /[\u4e00-\u9fa5]/.test(str);
-                        const line1 = textLines[0];
-                        const line2 = textLines[1];
+                    // 检测是否为双语字幕
+                    for (let line of textLines) {
+                        const hasChineseChar = /[\u4e00-\u9fa5]/.test(line);
                         
-                        // 处理speaker_unk前缀
-                        const cleanLine = line => line.replace(/^speaker_\w+_[^:]+:\s*/, '');
-                        
-                        if (hasChineseChar(line1)) {
-                            chineseText = cleanLine(line1);
-                            englishText = cleanLine(line2 || '');
-                        } else if (hasChineseChar(line2)) {
-                            chineseText = cleanLine(line2);
-                            englishText = cleanLine(line1 || '');
+                        // 保持原始格式，包括speaker标记
+                        if (hasChineseChar) {
+                            chineseLines.push(line);
                         } else {
-                            // 如果都没有中文，就按顺序显示
-                            chineseText = cleanLine(line1);
-                            englishText = textLines.length > 1 ? cleanLine(line2) : '';
+                            englishLines.push(line);
                         }
-                    } else if (textLines.length === 1) {
-                        // 只有一行的情况
-                        const line = textLines[0].replace(/^speaker_\w+_[^:]+:\s*/, '');
-                        englishText = line;
                     }
                     
                     // 组合显示格式
                     let displayText = '';
-                    if (chineseText && englishText) {
-                        displayText = `<div class="subtitle-chinese">${chineseText}</div>
-                                      <div class="subtitle-english">${englishText}</div>`;
-                    } else if (chineseText) {
-                        displayText = `<div class="subtitle-chinese">${chineseText}</div>`;
-                    } else if (englishText) {
-                        displayText = `<div class="subtitle-english">${englishText}</div>`;
+                    
+                    // 添加序号和时间信息
+                    if (sequenceNumber) {
+                        displayText += `<div class="subtitle-sequence">${sequenceNumber}</div>`;
+                    }
+                    displayText += `<div class="subtitle-time">${timeMatch[1]} --> ${timeMatch[2]}</div>`;
+                    
+                    // 添加字幕文本
+                    if (chineseLines.length > 0) {
+                        displayText += `<div class="subtitle-chinese">${chineseLines.join('<br>')}</div>`;
+                    }
+                    
+                    if (englishLines.length > 0) {
+                        displayText += `<div class="subtitle-english">${englishLines.join('<br>')}</div>`;
                     }
                     
                     subtitles.push({
