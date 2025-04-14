@@ -123,6 +123,18 @@ def proxy():
         
     try:
         response = requests.get(url, timeout=10)
+        
+        # 获取内容类型
+        content_type = response.headers.get('Content-Type', '')
+        
+        # 如果是字幕文件(srt)或文本文件，返回二进制内容，让前端处理编码
+        if url.lower().endswith('.srt') or 'text/' in content_type:
+            return response.content, 200, {
+                'Content-Type': 'application/octet-stream',
+                'Access-Control-Allow-Origin': '*'
+            }
+        
+        # 其他文件类型直接返回文本内容
         return response.text
     except Exception as e:
         return f"获取内容失败: {str(e)}"
