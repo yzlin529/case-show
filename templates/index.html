@@ -238,10 +238,10 @@
         <form method="POST" id="url-form">
             <div class="url-inputs">
                 <div class="url-input-group">
-                    <input type="text" name="url1" placeholder="输入第一个URL提取链接" value="{{ url1 }}">
+                    <input type="text" name="url1" placeholder="输入第一个URL提取链接（请输入.txt结尾的版本文件）" value="{{ url1 }}">
                 </div>
                 <div class="url-input-group">
-                    <input type="text" name="url2" placeholder="输入第二个URL提取链接" value="{{ url2 }}">
+                    <input type="text" name="url2" placeholder="输入第二个URL提取链接（请输入.txt结尾的版本文件）" value="{{ url2 }}">
                 </div>
             </div>
             <button type="submit">提取链接</button>
@@ -494,6 +494,18 @@
         
         // 内容缓存
         const contentCache = new Map();
+        
+        // 将字幕处理功能封装成模块
+        const SubtitleManager = {
+            parse: function(srtContent) { /* ... */ },
+            attachToVideo: function(video, subtitleUrl, displayElement) { /* ... */ }
+        };
+        
+        // 将内容加载功能封装成模块
+        const ContentLoader = {
+            loadSubtitle: function(url, elementId) { /* ... */ },
+            loadJSON: function(url, elementId) { /* ... */ }
+        };
         
         // 加载字幕内容
         function loadSubtitle(url, elementId) {
