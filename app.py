@@ -52,7 +52,7 @@ def extract_and_group_urls(url, groups, key):
         
     found_urls = extract_urls_from_page(url)
     for found_url in found_urls:
-        match = re.search(r'/(\d+_\d+)/', found_url)
+        match = re.search(r'(\d+_\d+)', found_url)
         group_name = match.group(1) if match else '其他'
         groups[group_name][key].append(found_url)
 
