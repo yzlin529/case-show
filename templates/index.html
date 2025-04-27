@@ -163,7 +163,20 @@
         }
         .subtitle-selector {
             margin-bottom: 10px;
-            text-align: right;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .subtitle-selector .left-controls {
+            display: flex;
+            align-items: center;
+        }
+        
+        .subtitle-selector .right-controls {
+            display: flex;
+            align-items: center;
         }
         
         .subtitle-selector select {
@@ -180,6 +193,14 @@
             font-size: 1.2em;
             background-color: rgba(0, 0, 0, 0.6);
             color: white;
+            text-align: center;
+            line-height: 1.5;
+            /* 将字幕设置在顶部 */
+            position: relative;
+            line-position: 10%;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            max-width: 90%;
         }
         
         /* 自定义顶部字幕样式 */
@@ -188,23 +209,7 @@
         }
         
         .top-subtitle {
-            position: absolute;
-            top: 10px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            color: white;
-            background-color: rgba(0, 0, 0, 0.6);
-            padding: 5px 10px;
-            font-size: 1.2em;
-            z-index: 10;
-            border-radius: 4px;
-            max-width: 80%;
-            margin: 0 auto;
-            min-height: 24px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            display: none; /* 隐藏顶部半透明框 */
         }
         
         /* 字幕样式 */
@@ -230,6 +235,104 @@
         .subtitle-english {
             font-style: italic;
             color: #cccccc;
+        }
+        
+        /* 查找ID按钮和信息显示样式 */
+        .video-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 4px 4px 0 0;
+        }
+        
+        .find-id-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: bold;
+            transition: background-color 0.2s;
+            flex-shrink: 0;
+        }
+        
+        .find-id-btn:hover {
+            background-color: #0b7dda;
+        }
+        
+        .json-file-select {
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            background-color: #222;
+            color: #fff;
+            font-size: 0.9em;
+        }
+        
+        /* 音频播放器样式 */
+        .audio-players-container {
+            margin-top: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .audio-players-content {
+            padding: 12px;
+            background-color: #f9f9f9;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .audio-player-item {
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .audio-player-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        
+        .audio-player-title {
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            color: #555;
+            word-break: break-all;
+        }
+        
+        .audio-player-item audio {
+            width: 100%;
+            margin: 5px 0;
+            border-radius: 20px;
+            background-color: #f0f0f0;
+        }
+        
+        /* ID信息容器样式 */
+        .id-info-container {
+            margin-top: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .id-info-content {
+            padding: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            background-color: #f9f9f9;
+            font-family: monospace;
+            font-size: 0.9em;
+            line-height: 1.5;
         }
     </style>
 </head>
@@ -293,22 +396,33 @@
                         {% if url in grouped_links[selected_group]['url1'] %}
                         <div class="media-container" data-group="{{ selected_group }}">
                             <div class="subtitle-selector">
-                                <select onchange="changeSubtitle(this, this.closest('.media-container').querySelector('video'))">
-                                    <option value="">选择字幕</option>
-                                    {% for subtitle_url in file_types['字幕'] if subtitle_url in grouped_links[selected_group]['url1'] %}
-                                    <option value="{{ subtitle_url }}">字幕{{ loop.index }}</option>
-                                    {% endfor %}
-                                </select>
+                                <div class="left-controls">
+                                    <button class="find-id-btn" onclick="findCurrentIdInfo(this, this.closest('.media-container').querySelector('video'))">加载JSON</button>
+                                </div>
+                                <div class="right-controls">
+                                    <select onchange="changeSubtitle(this, this.closest('.media-container').querySelector('video'))">
+                                        <option value="">选择字幕</option>
+                                        {% for subtitle_url in file_types['字幕'] if subtitle_url in grouped_links[selected_group]['url1'] %}
+                                        <option value="{{ subtitle_url }}">字幕{{ loop.index }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
                             </div>
                             <div class="video-container">
                                 <video controls preload="metadata" class="video-player">
                                     <source src="{{ url }}" type="video/mp4">
+                                    <!-- 动态添加字幕track -->
                                     您的浏览器不支持HTML5视频播放。
                                 </video>
-                                <div class="top-subtitle" id="subtitle-display-{{ loop.index }}"></div>
                             </div>
                             <div class="url-item">
                                 <a href="{{ url }}" target="_blank">{{ url }}</a>
+                            </div>
+                            <div class="id-info-container" style="display:none;">
+                                <div class="id-info-content">请点击"加载JSON"按钮</div>
+                            </div>
+                            <div class="audio-players-container" style="display:none;">
+                                <div class="audio-players-content"></div>
                             </div>
                         </div>
                         {% endif %}
@@ -374,22 +488,33 @@
                         {% if url in grouped_links[selected_group]['url2'] %}
                         <div class="media-container" data-group="{{ selected_group }}">
                             <div class="subtitle-selector">
-                                <select onchange="changeSubtitle(this, this.closest('.media-container').querySelector('video'))">
-                                    <option value="">选择字幕</option>
-                                    {% for subtitle_url in file_types['字幕'] if subtitle_url in grouped_links[selected_group]['url2'] %}
-                                    <option value="{{ subtitle_url }}">字幕{{ loop.index }}</option>
-                                    {% endfor %}
-                                </select>
+                                <div class="left-controls">
+                                    <button class="find-id-btn" onclick="findCurrentIdInfo(this, this.closest('.media-container').querySelector('video'))">加载JSON</button>
+                                </div>
+                                <div class="right-controls">
+                                    <select onchange="changeSubtitle(this, this.closest('.media-container').querySelector('video'))">
+                                        <option value="">选择字幕</option>
+                                        {% for subtitle_url in file_types['字幕'] if subtitle_url in grouped_links[selected_group]['url2'] %}
+                                        <option value="{{ subtitle_url }}">字幕{{ loop.index }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
                             </div>
                             <div class="video-container">
                                 <video controls preload="metadata" class="video-player">
                                     <source src="{{ url }}" type="video/mp4">
+                                    <!-- 动态添加字幕track -->
                                     您的浏览器不支持HTML5视频播放。
                                 </video>
-                                <div class="top-subtitle" id="subtitle-display-{{ loop.index }}"></div>
                             </div>
                             <div class="url-item">
                                 <a href="{{ url }}" target="_blank">{{ url }}</a>
+                            </div>
+                            <div class="id-info-container" style="display:none;">
+                                <div class="id-info-content">请点击"加载JSON"按钮</div>
+                            </div>
+                            <div class="audio-players-container" style="display:none;">
+                                <div class="audio-players-content"></div>
                             </div>
                         </div>
                         {% endif %}
@@ -455,6 +580,10 @@
     </div>
     
     <script>
+        // 全局变量存储文件类型和分组链接
+        window.fileTypes = JSON.parse('{{ file_types|tojson|safe }}');
+        window.groupedLinks = JSON.parse('{{ grouped_links|tojson|safe }}');
+        
         // 切换标签页
         function changeTab(tabName) {
             const tabButtons = document.querySelectorAll('.tab-button');
@@ -494,6 +623,9 @@
         
         // 内容缓存
         const contentCache = new Map();
+        
+        // JSON数据缓存
+        const jsonDataCache = new Map();
         
         // 将字幕处理功能封装成模块
         const SubtitleManager = {
@@ -600,16 +732,14 @@
         // 为视频添加字幕
         function changeSubtitle(select, video) {
             const selectedUrl = select.value;
-            const subtitleDisplay = video.nextElementSibling;
             
-            // 清除旧的字幕和监听器
-            if (video._updateSubtitleFn) {
-                video.removeEventListener('timeupdate', video._updateSubtitleFn);
-                delete video._updateSubtitleFn;
+            // 清除已有的字幕轨道
+            const tracks = video.getElementsByTagName('track');
+            while (tracks.length > 0) {
+                video.removeChild(tracks[0]);
             }
             
-            if (!selectedUrl || !subtitleDisplay) {
-                if (subtitleDisplay) subtitleDisplay.innerHTML = '';
+            if (!selectedUrl) {
                 return;
             }
             
@@ -618,45 +748,52 @@
                 .then(response => response.text())
                 .then(srtContent => {
                     try {
-                        // 解析字幕
-                        const subtitles = parseSrt(srtContent);
-                        
-                        // 添加时间更新监听器
-                        const updateSubtitle = function() {
-                            const currentTime = video.currentTime;
-                            let subtitle = '';
-                            
-                            // 查找当前时间对应的字幕
-                            for (let i = 0; i < subtitles.length; i++) {
-                                if (currentTime >= subtitles[i].start && currentTime <= subtitles[i].end) {
-                                    subtitle = subtitles[i].text;
-                                    break;
-                                }
-                            }
-                            
-                            // 更新字幕显示
-                            subtitleDisplay.innerHTML = subtitle;
-                        };
-                        
-                        video.addEventListener('timeupdate', updateSubtitle);
-                        video._updateSubtitleFn = updateSubtitle;
-                        
-                        // 初始显示
-                        updateSubtitle();
+                        // 创建WebVTT格式字幕以支持全屏模式
+                        createWebVttTrack(video, srtContent);
                     } catch (error) {
                         console.error('字幕处理错误:', error);
-                        subtitleDisplay.innerHTML = '字幕加载失败';
                     }
                 })
                 .catch(error => {
                     console.error('字幕加载失败:', error);
-                    subtitleDisplay.innerHTML = '字幕加载失败';
                 });
         }
         
-        // 解析SRT字幕，处理双语字幕
-        function parseSrt(srtContent) {
-            const subtitles = [];
+        // 创建WebVTT字幕轨道并添加到视频
+        function createWebVttTrack(video, srtContent) {
+            try {
+                // 将SRT转换为WebVTT
+                const vttContent = 'WEBVTT\n\n' + convertSrtToVtt(srtContent);
+                
+                // 创建Blob对象和URL
+                const vttBlob = new Blob([vttContent], { type: 'text/vtt' });
+                const vttUrl = URL.createObjectURL(vttBlob);
+                
+                // 创建track元素
+                const track = document.createElement('track');
+                track.kind = 'subtitles';
+                track.label = '字幕';
+                track.srclang = 'zh';
+                track.src = vttUrl;
+                track.default = true;
+                
+                // 添加到视频
+                video.appendChild(track);
+                
+                // 确保显示字幕
+                setTimeout(() => {
+                    if (video.textTracks && video.textTracks[0]) {
+                        video.textTracks[0].mode = 'showing';
+                    }
+                }, 100);
+            } catch (e) {
+                console.error('创建WebVTT字幕轨道失败:', e);
+            }
+        }
+        
+        // 将SRT内容转换为WebVTT格式
+        function convertSrtToVtt(srtContent) {
+            let vttContent = '';
             
             try {
                 // 预处理内容，处理可能的编码问题
@@ -681,25 +818,17 @@
                     
                     if (timeLineIndex < 0) continue;
                     
-                    // 提取时间
-                    const timeLine = lines[timeLineIndex];
-                    const timeMatch = timeLine.match(/(\d+:\d+:\d+[,\.]\d+)\s*-->\s*(\d+:\d+:\d+[,\.]\d+)/);
+                    // 序号部分 - 把之前的行作为ID
+                    let idPart = '';
+                    if (timeLineIndex > 0) {
+                        idPart = lines.slice(0, timeLineIndex).join('\n') + '\n';
+                    }
                     
-                    if (!timeMatch || timeMatch.length < 3) continue;
+                    // 获取时间行（需要将逗号改为点）
+                    const timeLine = lines[timeLineIndex].replace(/,/g, '.');
                     
-                    // 解析时间
-                    const startTime = parseTime(timeMatch[1]);
-                    const endTime = parseTime(timeMatch[2]);
-                    
-                    if (!startTime || !endTime) continue;
-                    
-                    // 序号行（如果存在）
-                    const sequenceNumber = timeLineIndex > 0 ? lines.slice(0, timeLineIndex).join('<br>') : '';
-                    
-                    // 获取文本 - 包含所有原始信息
+                    // 分离中英文
                     const textLines = lines.slice(timeLineIndex + 1);
-                    
-                    // 区分中英文字幕
                     let chineseLines = [];
                     let englishLines = [];
                     
@@ -715,51 +844,296 @@
                         }
                     }
                     
-                    // 组合显示格式
-                    let displayText = '';
+                    // 构建字幕文本
+                    let subtitleText = '';
                     
-                    // 添加序号和时间信息
-                    if (sequenceNumber) {
-                        displayText += `<div class="subtitle-sequence">${sequenceNumber}</div>`;
-                    }
-                    displayText += `<div class="subtitle-time">${timeMatch[1]} --> ${timeMatch[2]}</div>`;
-                    
-                    // 添加字幕文本
+                    // 添加中文字幕 - 处理长句换行
                     if (chineseLines.length > 0) {
-                        displayText += `<div class="subtitle-chinese">${chineseLines.join('<br>')}</div>`;
+                        const formattedChinese = chineseLines.map(line => {
+                            // 如果一行太长（超过40个字符），自动换行
+                            if (line.length > 40) {
+                                // 尝试在标点符号处换行
+                                let formatted = '';
+                                let currentLength = 0;
+                                for (let i = 0; i < line.length; i++) {
+                                    formatted += line[i];
+                                    currentLength++;
+                                    // 在标点符号处尝试换行
+                                    if (currentLength > 30 && /[，。！？、：；)）]/.test(line[i]) && i < line.length - 1) {
+                                        formatted += '\n';
+                                        currentLength = 0;
+                                    }
+                                }
+                                return formatted;
+                            }
+                            return line;
+                        }).join('\n');
+                        
+                        subtitleText += formattedChinese + '\n';
                     }
                     
+                    // 添加英文字幕 - 处理长句换行
                     if (englishLines.length > 0) {
-                        displayText += `<div class="subtitle-english">${englishLines.join('<br>')}</div>`;
+                        const formattedEnglish = englishLines.map(line => {
+                            // 如果一行太长（超过60个字符），自动换行
+                            if (line.length > 60) {
+                                // 尝试在空格处换行
+                                let formatted = '';
+                                let currentLength = 0;
+                                const words = line.split(' ');
+                                for (let i = 0; i < words.length; i++) {
+                                    if (currentLength + words[i].length > 50) {
+                                        formatted += '\n' + words[i] + ' ';
+                                        currentLength = words[i].length + 1;
+                                    } else {
+                                        formatted += words[i] + ' ';
+                                        currentLength += words[i].length + 1;
+                                    }
+                                }
+                                return formatted.trim();
+                            }
+                            return line;
+                        }).join('\n');
+                        
+                        subtitleText += formattedEnglish;
                     }
                     
-                    subtitles.push({
-                        start: startTime,
-                        end: endTime,
-                        text: displayText
-                    });
+                    // 添加到VTT内容 - 添加字幕位置参数
+                    vttContent += idPart + timeLine + ' line:10% position:50% align:center\n' + subtitleText + '\n\n';
                 }
             } catch (error) {
-                console.error('字幕解析错误:', error);
+                console.error('字幕转换错误:', error);
             }
             
-            return subtitles;
+            return vttContent;
         }
         
-        // 解析时间字符串
-        function parseTime(timeStr) {
-            try {
-                timeStr = timeStr.replace(',', '.');
-                const parts = timeStr.split(':');
-                
-                if (parts.length !== 3) return 0;
-                
-                return parseInt(parts[0], 10) * 3600 + 
-                       parseInt(parts[1], 10) * 60 + 
-                       parseFloat(parts[2]);
-            } catch (e) {
-                return 0;
+        // 查找当前ID信息
+        function findCurrentIdInfo(button, video) {
+            // 获取当前视频时间（毫秒）
+            const currentTimeMs = Math.floor(video.currentTime * 1000);
+            
+            // 找到ID信息容器
+            const container = button.closest('.media-container').querySelector('.id-info-container');
+            const contentElement = container.querySelector('.id-info-content');
+            
+            // 找到音频播放器容器
+            const audioContainer = button.closest('.media-container').querySelector('.audio-players-container');
+            const audioContentElement = audioContainer.querySelector('.audio-players-content');
+            
+            // 显示加载状态
+            container.style.display = 'block';
+            contentElement.innerHTML = '正在加载ID信息...';
+            audioContainer.style.display = 'none';
+            
+            // 获取当前组的第一个JSON文件
+            const mediaContainer = button.closest('.media-container');
+            const groupId = mediaContainer.getAttribute('data-group');
+            
+            // 确定是第一列还是第二列的视频
+            const isFirstColumn = mediaContainer.closest('#tab-视频-1') !== null;
+            const columnKey = isFirstColumn ? 'url1' : 'url2';
+            
+            let jsonUrl = null;
+            
+            // 查找当前组的JSON文件
+            const jsonFiles = window.fileTypes ? window.fileTypes['JSON'] : [];
+            if (jsonFiles && jsonFiles.length > 0) {
+                for (const url of jsonFiles) {
+                    if (window.groupedLinks && 
+                        window.groupedLinks[groupId] && 
+                        window.groupedLinks[groupId][columnKey] && 
+                        window.groupedLinks[groupId][columnKey].includes(url)) {
+                        jsonUrl = url;
+                        break;
+                    }
+                }
             }
+            
+            if (!jsonUrl) {
+                contentElement.innerHTML = '未找到可用的JSON文件';
+                return;
+            }
+            
+            // 加载JSON数据
+            loadJsonData(jsonUrl)
+                .then(data => {
+                    // 查找当前时间对应的ID
+                    const idInfo = findIdByTime(data, currentTimeMs);
+                    
+                    if (idInfo) {
+                        // 格式化并显示ID信息
+                        displayIdInfo(idInfo, contentElement);
+                        
+                        // 查找并显示相关音频
+                        findAndDisplayAudioLinks(idInfo.data, groupId, columnKey, audioContainer, audioContentElement);
+                    } else {
+                        contentElement.innerHTML = `未找到当前时间点(${formatTimeForDisplay(currentTimeMs)})对应的ID信息`;
+                    }
+                })
+                .catch(error => {
+                    contentElement.innerHTML = `加载JSON失败: ${error.message}`;
+                });
+        }
+        
+        // 查找并显示相关音频链接
+        function findAndDisplayAudioLinks(idData, groupId, columnKey, container, contentElement) {
+            // 在ID数据中查找所有可能的音频URL
+            const audioUrls = extractAudioUrlsFromData(idData);
+            
+            // 获取当前组中的所有音频文件
+            const audioFiles = [];
+            
+            if (window.fileTypes && window.fileTypes['音频'] && window.groupedLinks && window.groupedLinks[groupId]) {
+                const groupAudios = window.groupedLinks[groupId][columnKey] || [];
+                
+                for (const url of window.fileTypes['音频']) {
+                    if (groupAudios.includes(url)) {
+                        audioFiles.push(url);
+                    }
+                }
+            }
+            
+            // 合并从JSON中提取的和组中的音频链接
+            const allAudioUrls = [...new Set([...audioUrls, ...audioFiles])];
+            
+            // 如果找到音频链接，显示音频播放器
+            if (allAudioUrls.length > 0) {
+                container.style.display = 'block';
+                
+                let audioHtml = '';
+                allAudioUrls.forEach((url, index) => {
+                    audioHtml += `
+                    <div class="audio-player-item">
+                        <div class="audio-player-title">音频 ${index + 1}: ${url}</div>
+                        <audio controls preload="metadata">
+                            <source src="${url}" type="audio/mpeg">
+                            您的浏览器不支持HTML5音频播放。
+                        </audio>
+                    </div>`;
+                });
+                
+                contentElement.innerHTML = audioHtml || '未找到可播放的音频';
+            } else {
+                container.style.display = 'none';
+            }
+        }
+        
+        // 从ID数据中提取音频URL
+        function extractAudioUrlsFromData(data) {
+            const audioUrls = [];
+            const jsonStr = JSON.stringify(data);
+            
+            // 查找所有可能的音频URL
+            const urlPattern = /(https?:\/\/[^\s"]+\.(?:mp3|wav|ogg|m4a|aac|flac)(?:[^\s"]*)?)/g;
+            let match;
+            
+            while ((match = urlPattern.exec(jsonStr)) !== null) {
+                audioUrls.push(match[1]);
+            }
+            
+            return audioUrls;
+        }
+        
+        // 加载JSON数据，优先使用缓存
+        function loadJsonData(url) {
+            if (jsonDataCache.has(url)) {
+                return Promise.resolve(jsonDataCache.get(url));
+            }
+            
+            return fetch('/proxy?url=' + encodeURIComponent(url))
+                .then(response => response.json())
+                .then(data => {
+                    jsonDataCache.set(url, data);
+                    return data;
+                });
+        }
+        
+        // 根据时间查找对应的ID信息
+        function findIdByTime(data, timeMs) {
+            // 检查数据格式，确保有data数组
+            if (!data || !data.data || !Array.isArray(data.data)) {
+                return null;
+            }
+            
+            // 遍历data数组中的所有项
+            for (const item of data.data) {
+                // 确保有id和时间戳字段
+                if (item && 
+                    typeof item.id !== 'undefined' && 
+                    typeof item.start_time !== 'undefined' && 
+                    typeof item.end_time !== 'undefined') {
+                    
+                    // 检查时间是否在范围内
+                    if (timeMs >= item.start_time && timeMs <= item.end_time) {
+                        // 返回找到的ID和数据
+                        return {
+                            id: item.id,
+                            data: item
+                        };
+                    }
+                }
+            }
+            
+            return null;
+        }
+        
+        // 显示ID信息
+        function displayIdInfo(idInfo, element) {
+            const id = idInfo.id;
+            const data = idInfo.data;
+            
+            // 创建格式化的内容
+            let content = `ID: ${id}\n`;
+            content += `时间范围: ${data.start_time_ms} - ${data.end_time_ms}\n`;
+            
+            // 添加文本内容（如果有）
+            if (data.text) {
+                content += `\n原文: ${data.text}\n`;
+            }
+            
+            if (data.target_text) {
+                content += `译文: ${data.target_text}\n`;
+            }
+            
+            // 添加说话人信息（如果有）
+            if (data.speaker) {
+                content += `说话人: ${data.speaker}\n`;
+            }
+            
+            // 添加其他有用信息
+            if (data.source_lang && data.target_lang) {
+                content += `语言: ${data.source_lang} → ${data.target_lang}\n`;
+            }
+            
+            // 添加所有字段信息
+            content += '\n完整内容:\n';
+            content += JSON.stringify(data, null, 2);
+            
+            // 设置内容
+            element.innerHTML = escapeHtml(content);
+        }
+        
+        // 格式化时间显示（毫秒转为可读格式）- 用于显示当前视频时间
+        function formatTimeForDisplay(ms) {
+            if (ms === undefined || ms === null) return '未知';
+            
+            const totalSeconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            const remainingMs = ms % 1000;
+            
+            return `${padZero(minutes)}:${padZero(seconds)},${padMs(remainingMs)}`;
+        }
+        
+        // 数字前补零
+        function padZero(num) {
+            return num.toString().padStart(2, '0');
+        }
+        
+        // 毫秒补零
+        function padMs(ms) {
+            return ms.toString().padStart(3, '0');
         }
 
         // 初始化
@@ -779,7 +1153,30 @@
                     if (video) changeSubtitle(select, video);
                 }
             });
+            
+            // 添加视频时间更新事件监听器 - 用于JSON ID显示
+            document.querySelectorAll('.video-player').forEach(video => {
+                video.addEventListener('loadedmetadata', function() {
+                    console.log('视频元数据已加载');
+                });
+            });
+            
+            // 添加全屏状态变化监听器
+            document.addEventListener('fullscreenchange', handleFullScreenChange);
+            document.addEventListener('webkitfullscreenchange', handleFullScreenChange);
+            document.addEventListener('mozfullscreenchange', handleFullScreenChange);
+            document.addEventListener('MSFullscreenChange', handleFullScreenChange);
         });
+        
+        // 处理全屏状态变化
+        function handleFullScreenChange() {
+            const videos = document.querySelectorAll('.video-player');
+            videos.forEach(video => {
+                // 确保字幕轨道显示
+                if (video.textTracks && video.textTracks[0]) {
+                    video.textTracks[0].mode = 'showing';
+                }
+            });
+        }
     </script>
 </body>
-</html>
