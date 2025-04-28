@@ -818,12 +818,6 @@
                     
                     if (timeLineIndex < 0) continue;
                     
-                    // 序号部分 - 把之前的行作为ID
-                    let idPart = '';
-                    if (timeLineIndex > 0) {
-                        idPart = lines.slice(0, timeLineIndex).join('\n') + '\n';
-                    }
-                    
                     // 获取时间行（需要将逗号改为点）
                     const timeLine = lines[timeLineIndex].replace(/,/g, '.');
                     
@@ -846,6 +840,13 @@
                     
                     // 构建字幕文本
                     let subtitleText = '';
+                    
+                    // 添加序号和时间信息作为字幕内容的一部分
+                    if (timeLineIndex > 0) {
+                        subtitleText += `${lines.slice(0, timeLineIndex).join(' ')} [${timeLine.split(' --> ')[0]} - ${timeLine.split(' --> ')[1].split(' ')[0]}]\n`;
+                    } else {
+                        subtitleText += `[${timeLine.split(' --> ')[0]} - ${timeLine.split(' --> ')[1].split(' ')[0]}]\n`;
+                    }
                     
                     // 添加中文字幕 - 处理长句换行
                     if (chineseLines.length > 0) {
@@ -899,7 +900,7 @@
                     }
                     
                     // 添加到VTT内容 - 添加字幕位置参数
-                    vttContent += idPart + timeLine + ' line:10% position:50% align:center\n' + subtitleText + '\n\n';
+                    vttContent += timeLine + ' line:10% position:50% align:center\n' + subtitleText + '\n\n';
                 }
             } catch (error) {
                 console.error('字幕转换错误:', error);
@@ -1102,8 +1103,8 @@
             }
             
             // 添加其他有用信息
-            if (data.source_lang && data.target_lang) {
-                content += `语言: ${data.source_lang} → ${data.target_lang}\n`;
+            if (data.lang) {
+                content += `语言: ${data.lang}\n`;
             }
             
             // 添加所有字段信息
